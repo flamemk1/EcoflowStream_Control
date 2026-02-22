@@ -29,12 +29,12 @@ First you need the MQTT credentials of your Ecoflow App.
 Visit the website https://energychain.github.io/site_ecoflow_mqtt_credentials/ and enter your e-mail and password from your Ecorflow account.
 
 You should get back something like this:
-- MQTT Protocoll	mqtts
-- MQTT Host	mqtt-e.ecoflow.com
-- MQTT Port	8883
-- MQTT User	app-123456789abcdef123456
-- MQTT Password	fedcba987654321
-- MQTT Client ID (sample)	ANDROID_12345678_987654321987654
+- MQTT Protocoll:	mqtts
+- MQTT Host:	mqtt-e.ecoflow.com
+- MQTT Port:	8883
+- MQTT User:	app-123456789abcdef123456
+- MQTT Password:	fedcba987654321
+- MQTT Client ID (sample):	ANDROID_12345678_987654321987654
 
 Secondly, you need the MQTT cedential of the official Ecoflow API.
 1. Visit the official Ecoflow developer website: https://developer-eu.ecoflow.com/us

@@ -18,9 +18,9 @@ Wrong communication or setting wrong values can affect the functionality of the 
 A python 3 installation is required.
 Install the required libraries:
 ```bash
-- pip install numpy
-- pip install paho-mqtt
-- pip install ssl
+pip install numpy
+pip install paho-mqtt
+pip install ssl
 ````
 
 ## EF credentials
@@ -29,12 +29,12 @@ First you need the MQTT credentials of your Ecoflow App.
 Visit the website https://energychain.github.io/site_ecoflow_mqtt_credentials/ and enter your e-mail and password from your Ecorflow account.
 
 You should get back something like this:
-MQTT Protocoll	mqtts
-MQTT Host	mqtt-e.ecoflow.com
-MQTT Port	8883
-MQTT User	app-123456789abcdef123456
-MQTT Password	fedcba987654321
-MQTT Client ID (sample)	ANDROID_12345678_987654321987654
+- MQTT Protocoll	mqtts
+- MQTT Host	mqtt-e.ecoflow.com
+- MQTT Port	8883
+- MQTT User	app-123456789abcdef123456
+- MQTT Password	fedcba987654321
+- MQTT Client ID (sample)	ANDROID_12345678_987654321987654
 
 Secondly, you need the MQTT cedential of the official Ecoflow API.
 1. Visit the official Ecoflow developer website: https://developer-eu.ecoflow.com/us
@@ -42,6 +42,7 @@ Secondly, you need the MQTT cedential of the official Ecoflow API.
 3. Follow the informations on https://developer-eu.ecoflow.com/us/document/generalInfo under section "MQTT certificate acquisition" to get the credentials.
 
 You should get back something like this:
+```json
 {
     "code":"0",
     "message":"Success",
@@ -53,7 +54,7 @@ You should get back something like this:
         "protocol":"mqtts"
     }
 }
-
+````
 ## Setup and Configuration
 
 #### App Settings:
@@ -95,7 +96,7 @@ python stream_e-meter_control.py
 ````
 You can also run it in a venv or container.
 
-## Description
+## Further Description
 
 
 ## License

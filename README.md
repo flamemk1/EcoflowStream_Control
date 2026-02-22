@@ -98,6 +98,31 @@ You can also run it in a venv or container.
 
 ## Further Description
 
+#### Payload
+I have identified two different payloads which can be used to adapt the AC output power. Both seem to work (at least for my Stream device). Currently, only the first one is used, the other one is uncommented:
+```bash
+if (power != power_old) or (gridConnectionPower < power-20) or (gridConnectionPower > power+20):
+            #eco_app.publish(ECOFLOW_TOPIC, payload=payload2_bytes, qos=0)
+            eco_app.publish(ECOFLOW_TOPIC, payload=payload1_bytes, qos=0)
+````
+
+#### Moving Average Filter
+I observed large oscillations on the AC out power without a filter. You can adapt the filter depth to your needs by changing
+```bash
+BUFFER_SIZE = 15 # depth of the moving average buffer
+````
+
+#### Power Offset
+Since the e-meter power and AC output power fluctuates all the time about +-50W, it might make sense to add a positive power offset to avoid to feed in power to grid. By default the power offset is set to 50W. Hence, if the e-meter power (overall power) is 300W, the AC output power is set to 250W. You can change it here:
+```bash
+EMETER_POWER_OFFSET = 50 # defines the positive nominal power offset
+````
+
+#### Load jumps
+When the load jumps from a high value to a low value, the filtered power does not follow the load jump directly. To prevent feed-in to grid, the AC output power is set to zero and the filter is reset.
+
+#### Near Backup SOC behavior
+Since the last FW update the Stream device acts quite weird when SoC equals Backup SoC. That's why the AC output power is set to zero when the SoC is only 1% higher than Backup SoC. Furthermore, when SoC is 2% higher than Backup SoC, the AC output power is set to the PV power. Hence, the batterie isn't charged or discharged.  
 
 ## License
 

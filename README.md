@@ -36,7 +36,7 @@ You should get back something like this:
 - MQTT Password:	fedcba987654321
 - MQTT Client ID (sample):	ANDROID_12345678_987654321987654
 
-Secondly, you need the MQTT cedential of the official Ecoflow API.
+Secondly, you need the MQTT credential of the official Ecoflow API.
 1. Visit the official Ecoflow developer website: https://developer-eu.ecoflow.com/us
 2. Click on "Become a Developer". After a few days, your account gets unlocked. (I didn't get a notification, I just was able to log in after a while)
 3. Follow the informations on https://developer-eu.ecoflow.com/us/document/generalInfo under section "MQTT certificate acquisition" to get the credentials.

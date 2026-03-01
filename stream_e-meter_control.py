@@ -50,12 +50,13 @@ TEMPLATE_OFFSET2 = 12  # <-- adjust if your capture differs
 
 BUFFER_SIZE = 15 # depth of the moving average buffer
 MAX_POWER = 1200 # maximum AC output power of the stream device
-EMETER_POWER_OFFSET = 50 # defines the positive nominal power offset
+DEFAULT_EMETER_POWER_OFFSET = 50 # defines the positive nominal power offset
 
+eMeterPowerOffset = DEFAULT_EMETER_POWER_OFFSET
 gridConnectionPower = 0.0
 powChargeDischargeBat = 0.0
 soc = 0
-backupReverseSoc = 100
+backupReverseSoc = 23
 PVpower1 = 0.0
 PVpower2 = 0.0
 PVpower3 = 0.0
@@ -64,7 +65,23 @@ power_avg = np.zeros(BUFFER_SIZE)
 i_avg = 0
 power_old = 0.0
 
+# ========= App Connection =========
+def on_app_connect(client, userdata, flags, reason_code, properties):
+    print(f"[MQTT App] Connected: {reason_code}")
+
+
+def on_app_disconnect(client, userdata, reason_code, properties):
+    print(f"[MQTT App] Disconnected: {reason_code}")
+    
 # ========= EF STATE CALLBACK =========
+def on_ef_state_connect(client, userdata, flags, reason_code, properties):
+    print(f"[MQTT API] Connected: {reason_code}")
+    
+    # MUST be here so it runs after every reconnect
+    client.subscribe(ECOFLOW_TOPIC_STATE)
+
+def on_ef_state_disconnect(client, userdata, reason_code, properties):
+    print(f"[MQTT API] Disconnected: {reason_code}")
 
 def on_ef_state_message(client, userdata, msg):
     global gridConnectionPower
@@ -75,90 +92,61 @@ def on_ef_state_message(client, userdata, msg):
     global PVpower2
     global PVpower3
     global PVpower4
+
     try:
         # grid power
         data = json.loads(msg.payload.decode())
-        gridConnectionPower =  float(data["gridConnectionPower"])
-        
-        #print(f"gridConnectionPower {gridConnectionPower:.1f} W")
-        
+        gridConnectionPower =  float(data["gridConnectionPower"])        
+        print(f"gridConnectionPower {gridConnectionPower:.1f} W")
     except Exception as e:
-        #print("Warning:", e, gridConnectionPower)
-        print(" ")
+        pass
         
     try:
+        print("Error:", e, gridConnectionPower)
         # battery charge/discharge
-        data = json.loads(msg.payload.decode())
-        powChargeDischargeBat = int(data["powGetBpCms"]) # positive = charging; negative = discharging
-        
+        powChargeDischargeBat = int(data["powGetBpCms"]) # positive = charging; negative = discharging        
         print(f"Battery Charge/Discharge Power: {powChargeDischargeBat} W")
-
     except Exception as e:
-        #print("Warning:", e, powChargeDischargeBat)
-        print(" ")
+        pass
         
     try:
         # SOC
-        data = json.loads(msg.payload.decode())
-        soc = int(data["soc"]) # int SOC
-        
+        soc = int(data["soc"]) # int SOC        
         print(f"SoC: {soc} %")
-
     except Exception as e:
-       # print("Warning:", e, soc)
-       print(" ")
+        pass
         
     try:
         # Backup Reserve SoC
-        data = json.loads(msg.payload.decode())
-        backupReverseSoc = int(data["backupReverseSoc"]) # int backup
-        
+        backupReverseSoc = int(data["backupReverseSoc"]) # int backup        
         print(f"Backup Reserve SoC: {backupReverseSoc} %")
-
     except Exception as e:
-        #print("Warning:", e, backupReverseSoc)
-        print(" ")
+        pass
         
-    # PV power
     try:
-        data = json.loads(msg.payload.decode())
-        PVpower1 = int(data["powGetPv1"])
-        
+        # PV power
+        PVpower1 = int(data["powGetPv1"])    
         print(f"PV power1: {PVpower1} W")
-
     except Exception as e:
-        #print("Warning:", e, PVpower)
-        print(" ")
+        pass
         
     try:
-        data = json.loads(msg.payload.decode())
-        PVpower2 = int(data["powGetPv2"])
-        
+        PVpower2 = int(data["powGetPv2"])   
         print(f"PV power2: {PVpower2} W")
-
     except Exception as e:
-        #print("Warning:", e, PVpower)
-        print(" ")
+        pass
         
     try:
-        data = json.loads(msg.payload.decode())
-        PVpower4 = int(data["powGetPv4"])
-        
+        PVpower4 = int(data["powGetPv4"])   
         print(f"PV power4: {PVpower4} W")
-
     except Exception as e:
-        #print("Warning:", e, PVpower)
-        print(" ")
+        pass
         
     try:
-        data = json.loads(msg.payload.decode())
-        PVpower3 = int(data["powGetPv3"])
-        
+        PVpower3 = int(data["powGetPv3"])    
         print(f"PV power3: {PVpower3} W")
-
     except Exception as e:
-        #print("Warning:", e, PVpower)
-        print(" ")
+        pass
 
 # ========= ECOFLOW CLIENT =========
 # App
@@ -173,8 +161,10 @@ eco_app.tls_set(
     cert_reqs=ssl.CERT_REQUIRED,
     tls_version=ssl.PROTOCOL_TLS_CLIENT
 )
-
-eco_app.connect(ECOFLOW_HOST, ECOFLOW_PORT)
+eco_app.on_connect = on_app_connect
+eco_app.on_disconnect = on_app_disconnect
+eco_app.reconnect_delay_set(min_delay=1, max_delay=120)
+eco_app.connect(ECOFLOW_HOST, ECOFLOW_PORT, keepalive=30)
 eco_app.loop_start()
 
 # API
@@ -189,12 +179,22 @@ eco_api.tls_set(
     cert_reqs=ssl.CERT_REQUIRED,
     tls_version=ssl.PROTOCOL_TLS_CLIENT
 )
+eco_api.on_connect = on_ef_state_connect
+eco_api.on_disconnect = on_ef_state_disconnect
 eco_api.on_message = on_ef_state_message
-eco_api.connect(ECOFLOW_HOST, ECOFLOW_PORT)
-eco_api.subscribe(ECOFLOW_TOPIC_STATE)
+eco_api.reconnect_delay_set(min_delay=1, max_delay=120)
+eco_api.connect(ECOFLOW_HOST, ECOFLOW_PORT, keepalive=30)
 eco_api.loop_start()
 
 # ========= EMETER CALLBACK =========
+def on_emeter_connect(client, userdata, flags, reason_code, properties):
+    print(f"[MQTT EMETER] Connected: {reason_code}")
+    
+    # MUST be here so it runs after every reconnect
+    client.subscribe(EMETER_TOPIC)
+
+def on_emeter_disconnect(client, userdata, reason_code, properties):
+    print(f"[MQTT EMETER] Disconnected: {reason_code}")
 
 def on_emeter_message(client, userdata, msg):
     global power_avg
@@ -205,31 +205,40 @@ def on_emeter_message(client, userdata, msg):
         data = json.loads(msg.payload.decode())
         emeter_power = float(data["eHZ"]["Power"])
         
+        # Overall PV power
+        PVpower = PVpower1 + PVpower2 + PVpower3 + PVpower4
+        
+        # Power Offset
+        if backupReverseSoc < 20 and PVpower > power_old:
+            if soc < 30:
+                eMeterPowerOffset = 20
+            else:
+                eMeterPowerOffset = 0
+        else:
+            eMeterPowerOffset = DEFAULT_EMETER_POWER_OFFSET
+        
         # filtered emeter power
-        power_avg[i_avg] = emeter_power + gridConnectionPower - EMETER_POWER_OFFSET
+        power_avg[i_avg] = emeter_power + gridConnectionPower - eMeterPowerOffset
         i_avg += 1
         if i_avg > BUFFER_SIZE-1:
             i_avg = 0
         power_filtered = sum(power_avg)/BUFFER_SIZE
                 
         # assign filtered or actual e-meter power
-        delta_power = power_filtered - (emeter_power + gridConnectionPower - EMETER_POWER_OFFSET)
+        delta_power = power_filtered - (emeter_power + gridConnectionPower - eMeterPowerOffset)
         
         if delta_power > 50:
             power_avg = np.ones(BUFFER_SIZE)*emeter_power
             power = emeter_power + gridConnectionPower - 150
             power_avg = np.ones(BUFFER_SIZE)*power
         elif delta_power < -200:
-              power = power_old + 100
+              power = emeter_power + gridConnectionPower - eMeterPowerOffset
               power_avg = np.ones(BUFFER_SIZE)*power
         else:
             power = power_filtered
         
         # Limit power to min/max 
         power = max(0, min(power, MAX_POWER))
-        
-        # Overall PV power
-        PVpower = PVpower1 + PVpower2 + PVpower3 + PVpower4
                
         # SoC near Backup SoC       
         if ((soc-2) <= backupReverseSoc): # if SoC is 2% over Backup SoC, limit discharge to current PV power
@@ -237,6 +246,17 @@ def on_emeter_message(client, userdata, msg):
                 power = PVpower
         if (soc-1) <= backupReverseSoc: # if SoC is 1% over Backup SoC, set power to zero
             power = 0.0
+            
+        # avoid "grid off" condition
+        if power > PVpower and power > 400:
+            delta_target_actual = power_old - gridConnectionPower
+            if delta_target_actual > 12:
+                power = power_old
+            else:
+                if power_old < 320:
+                    power = power_old + 100
+                else:
+                    power = power_old + 30
             
         power_int = int(round(power))        
         
@@ -263,7 +283,7 @@ def on_emeter_message(client, userdata, msg):
         
         power_old = power
         
-        print(f"Filtered Power: {power_filtered:.1f} W; actual e-Meter Power: {emeter_power:.1f} W; delta power {delta_power:.1f} W; gridConnectionPower: {gridConnectionPower:.1f} W; Sent: {power_int} W")
+        print(f"Filtered Power: {power_filtered:.1f} W; actual e-Meter Power: {emeter_power:.1f} W; delta power {delta_power:.1f} W; offset power: {eMeterPowerOffset:.1f} W; gridConnectionPower: {gridConnectionPower:.1f} W; Sent: {power_int} W")
 
     except Exception as e:
         print("Error:", e, gridConnectionPower)
@@ -271,8 +291,10 @@ def on_emeter_message(client, userdata, msg):
 # ========= EMETER CLIENT =========
 
 em = mqtt.Client(callback_api_version=mqtt.CallbackAPIVersion.VERSION2)
+em.on_connect = on_emeter_connect
+em.on_disconnect = on_emeter_disconnect
 em.on_message = on_emeter_message
 
-em.connect(EMETER_HOST, EMETER_PORT)
-em.subscribe(EMETER_TOPIC)
+em.reconnect_delay_set(min_delay=1, max_delay=120)
+em.connect(EMETER_HOST, EMETER_PORT, keepalive=30)
 em.loop_forever()
